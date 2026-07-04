@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Monitoring Iuran PGBP</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-blue: #0A3254; 
+            --secondary-blue: #1A5F9A;
+            --accent-gold: #D4AF37; 
+            --light-gold: #FDFBF0;
+            --bg-light: #F4F7FA;
+            --text-dark: #333333;
+            --sidebar-width: 260px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* --- Loading Screen --- */
+        #loading-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+
+        /* --- Auth Pages --- */
+        #auth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            padding: 20px;
+        }
+        .auth-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            width: 100%;
+            max-width: 480px;
+            border-top: 5px solid var(--accent-gold);
+            position: relative;
+        }
+        .auth-header {
+            padding: 40px 30px 20px;
+            text-align: center;
+        }
+        .auth-header img {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            border: 3px solid var(--accent-gold);
+            padding: 3px;
+        }
+        .btn-gold {
+            background-color: var(--accent-gold);
+            color: #fff;
+            font-weight: 600;
+            border: none;
+            transition: all 0.3s;
+        }
+        .btn-gold:hover {
+            background-color: #C19B2E;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        /* --- Main Layout --- */
+        #app-layout {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--primary-blue);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            transition: all 0.3s ease;
+            z-index: 1040;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .sidebar-header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background-color: rgba(0,0,0,0.1);
+        }
+        .sidebar-header img {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid var(--accent-gold);
+            margin-bottom: 10px;
+        }
+        .sidebar-menu {
+            padding: 15px 0;
+            overflow-y: auto;
+            height: calc(100vh - 160px);
+        }
+        .menu-item {
+            padding: 12px 25px;
+            color: rgba(255,255,255,0.7);
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .menu-item:hover, .menu-item.active {
+            color: white;
+            background-color: var(--secondary-blue);
+            border-left: 4px solid var(--accent-gold);
+        }
+        .menu-item i { width: 25px; color: var(--accent-gold); }
+
+        .main-content {
+            flex-grow: 1;
+            margin-left: var(--sidebar-width);
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .topbar {
+            background: white;
+            height: 70px;
+            padding: 0 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky; top: 0; z-index: 1030;
+        }
+        .content-area { padding: 25px; flex-grow: 1; }
+        .view-section { display: none; animation: fadeIn 0.4s ease; }
+        .view-section.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-stat {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            transition: transform 0.3s;
+            border-bottom: 4px solid var(--accent-gold);
+        }
+        .card-stat:hover { transform: translateY(-5px); }
+        .table-custom {
+            background: white; border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden;
+        }
+        .table-custom thead { background-color: var(--primary-blue); color: white; }
+        .table-custom th { font-weight: 500; border: none; }
+        
+        .bukti-img-preview {
+            max-width: 100%; max-height: 300px;
+            object-fit: contain; border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { margin-left: calc(-1 * var(--sidebar-width)); }
+            .sidebar.show { margin-left: 0; }
+            .main-content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div class="spinner-border mb-3" style="color: var(--accent-gold); width: 3rem; height: 3rem;" role="status"></div>
+        <h4 style="color: var(--primary-blue); font-weight: 600;">Memuat Sistem PGBP...</h4>
+    </div>
+
+    <div id="auth-page" style="display: none;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <!-- Logo PGBP -->
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQRMZ24t8P4gMYmmGAd9e7HyJiVssQuudwG2A01KqAb3Q&s" alt="Logo PGBP">
+                <h4 style="color: var(--primary-blue); font-weight: 700;">Iuran PGBP</h4>
+                <p class="text-muted small">Persekutuan Gereja-Gereja Baptis Papua</p>
+            </div>
+            
+            <div class="p-4 pt-0">
+                <!-- Form Login -->
+                <div id="login-form-container">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="loginEmail" class="form-control" required placeholder="email@contoh.com">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="loginPassword" class="form-control" required placeholder="******">
+                        </div>
+                        <button type="submit" class="btn btn-gold w-100 py-2 mb-3">Masuk <i class="fas fa-sign-in-alt ms-1"></i></button>
+                        <div class="text-center small">
+                            Belum punya akun Wilayah? <a href="#" onclick="toggleAuth('register')" class="text-decoration-none fw-bold" style="color: var(--primary-blue);">Daftar Disini</a>
+                        </div>
+                    </form>
+                    <div class="alert alert-light border mt-3 small p-2 text-center">
+                        <strong>Demo Login Pusat:</strong><br>
+                        Email: admin@pgbp.org | Pass: admin123
+                    </div>
+                </div>
+
+                <!-- Form Register (Khusus Wilayah) -->
+                <div id="register-form-container" style="display: none;">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Nama Lengkap (Sekretaris/Admin)</label>
+                            <input type="text" id="regNama" class="form-control" required placeholder="John Doe">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="regEmail" class="form-control" required placeholder="admin.wilayah@pgbp.org">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Pilih Wilayah Anda</label>
+                            <div class="input-group">
+                                <select id="regWilayahSelect" class="form-select">
+                                    <!-- Injected via JS -->
+                                </select>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleNewWilayah()" id="btnToggleNewWilayah" title="Tambah Wilayah Baru">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <input type="text" id="regWilayahBaru" class="form-control mt-2" placeholder="Ketik Nama Wilayah Baru..." style="display:none;">
+                            <small class="text-muted" style="font-size: 0.75rem;">Pilih dari daftar atau tambah baru jika tidak ada.</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="regPassword" class="form-control" required placeholder="******">
+                        </div>
+                        <button type="submit" class="btn btn-gold w-100 py-2 mb-3">Daftar Akun Wilayah <i class="fas fa-user-plus ms-1"></i></button>
+                        <div class="text-center small">
+                            Sudah punya akun? <a href="#" onclick="toggleAuth('login')" class="text-decoration-none fw-bold" style="color: var(--primary-blue);">Kembali ke Login</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-layout" style="display: none;">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQRMZ24t8P4gMYmmGAd9e7HyJiVssQuudwG2A01KqAb3Q&s" alt="Logo">
+                <h6 class="text-white mb-1 fw-bold">Sistem Iuran PGBP</h6>
+                <span class="badge bg-warning text-dark mt-1" id="userRoleBadge">Role</span>
+            </div>
+            <div class="sidebar-menu">
+                <a class="menu-item active" data-target="dashboard">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <!-- Menu Khusus Pusat -->
+                <a class="menu-item menu-pusat-only" data-target="wilayah">
+                    <i class="fas fa-map-marked-alt"></i> Data Wilayah
+                </a>
+                <a class="menu-item menu-pusat-only" data-target="pengguna">
+                    <i class="fas fa-users-cog"></i> Kelola Pengguna
+                </a>
+                <!-- Menu Umum -->
+                <a class="menu-item" data-target="jemaat">
+                    <i class="fas fa-church"></i> Data Jemaat
+                </a>
+                <a class="menu-item" data-target="pembayaran">
+                    <i class="fas fa-file-invoice-dollar"></i> Iuran Bulanan
+                </a>
+                <a class="menu-item" data-target="laporan">
+                    <i class="fas fa-chart-bar"></i> Laporan
+                </a>
+                <a class="menu-item" data-target="pengaturan">
+                    <i class="fas fa-cog"></i> Pengaturan
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Topbar -->
+            <div class="topbar">
+                <div>
+                    <button class="btn btn-light d-md-none" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <span class="ms-2 fw-bold text-muted d-none d-md-inline" id="topbar-title">Dashboard</span>
+                </div>
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle text-dark" id="userDropdown" data-bs-toggle="dropdown">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=D4AF37&color=fff" alt="User" width="32" height="32" class="rounded-circle me-2" id="userAvatar">
+                        <strong id="userNameDisplay">Nama User</strong>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li><a class="dropdown-item" href="#" onclick="switchView('pengaturan')"><i class="fas fa-user fa-sm me-2 text-muted"></i> Profil</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="#" id="btnLogout"><i class="fas fa-sign-out-alt fa-sm me-2"></i> Keluar</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="content-area">
+                
+                <!-- VIEW: DASHBOARD -->
+                <div id="view-dashboard" class="view-section active">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                        <h4 style="color: var(--primary-blue); font-weight: 600;" id="dash-title">Ringkasan Data Nasional</h4>
+                        <span class="text-muted"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></span>
+                    </div>
+
+                    <!-- Stat Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3 stat-pusat-only">
+                            <div class="card card-stat card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted mb-1 small">Total Wilayah</p>
+                                        <h3 class="mb-0 fw-bold" id="stat-wilayah">0</h3>
+                                    </div>
+                                    <div class="icon bg-light text-primary p-3 rounded"><i class="fas fa-map fa-lg"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted mb-1 small">Total Jemaat (Gereja)</p>
+                                        <h3 class="mb-0 fw-bold" id="stat-jemaat">0</h3>
+                                    </div>
+                                    <div class="icon bg-light text-primary p-3 rounded"><i class="fas fa-church fa-lg"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted mb-1 small">Total Jiwa</p>
+                                        <h3 class="mb-0 fw-bold" id="stat-jiwa">0</h3>
+                                    </div>
+                                    <div class="icon bg-light text-info p-3 rounded"><i class="fas fa-users fa-lg"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-stat card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <p class="text-muted mb-1 small">Pemasukan Bulan Ini</p>
+                                        <h5 class="mb-0 fw-bold text-success" id="stat-masuk-bulan">Rp 0</h5>
+                                    </div>
+                                    <div class="icon bg-success bg-opacity-10 text-success p-3 rounded"><i class="fas fa-money-bill-wave fa-lg"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-8">
+                            <div class="card border-0 shadow-sm rounded-4">
+                                <div class="card-body">
+                                    <h6 class="fw-bold mb-3">Grafik Pemasukan (Tahun Ini)</h6>
+                                    <canvas id="chartPemasukan" height="100"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 stat-pusat-only">
+                            <div class="card border-0 shadow-sm rounded-4 h-100">
+                                <div class="card-body">
+                                    <h6 class="fw-bold mb-3">Penyebaran Berdasarkan Wilayah</h6>
+                                    <canvas id="chartWilayah" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: WILAYAH -->
+                <div id="view-wilayah" class="view-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 style="color: var(--primary-blue); font-weight: 600;">Data Master Wilayah</h4>
+                        <button class="btn btn-gold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalWilayah" onclick="resetForm('formWilayah')">
+                            <i class="fas fa-plus"></i> Tambah Wilayah
+                        </button>
+                    </div>
+                    <div class="table-custom p-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="tableWilayah">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama Wilayah</th>
+                                        <th>Kontak</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: JEMAAT -->
+                <div id="view-jemaat" class="view-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <h4 style="color: var(--primary-blue); font-weight: 600;">Data Jemaat (Gereja)</h4>
+                        <button class="btn btn-gold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalJemaat" onclick="setupFormJemaat()">
+                            <i class="fas fa-plus"></i> Tambah Jemaat Baru
+                        </button>
+                    </div>
+                    <div class="table-custom p-3">
+                        <div class="row mb-3 stat-pusat-only">
+                            <div class="col-md-4">
+                                <label class="small text-muted mb-1">Filter Wilayah</label>
+                                <select class="form-select rounded-pill" id="filterWilayahJemaat" onchange="loadTableJemaat()">
+                                    <option value="">Semua Wilayah</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="tableJemaat">
+                                <thead>
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama Gereja (Jemaat)</th>
+                                        <th>Wilayah</th>
+                                        <th>Pendeta/Gembala</th>
+                                        <th>Jumlah Jiwa</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: PEMBAYARAN -->
+                <div id="view-pembayaran" class="view-section">
+                    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                        <h4 style="color: var(--primary-blue); font-weight: 600;">Monitoring & Input Iuran</h4>
+                        <button class="btn btn-gold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalPembayaran" onclick="setupFormPembayaran()">
+                            <i class="fas fa-cash-register"></i> Input Pembayaran
+                        </button>
+                    </div>
+                    
+                    <div class="table-custom p-3">
+                        <div class="row mb-3 g-2">
+                            <div class="col-md-3">
+                                <select class="form-select" id="filterBulanBayar" onchange="loadTablePembayaran()">
+                                    <option value="">Semua Bulan</option>
+                                    <option value="Januari">Januari</option><option value="Februari">Februari</option>
+                                    <option value="Maret">Maret</option><option value="April">April</option>
+                                    <option value="Mei">Mei</option><option value="Juni">Juni</option>
+                                    <option value="Juli">Juli</option><option value="Agustus">Agustus</option>
+                                    <option value="September">September</option><option value="Oktober">Oktober</option>
+                                    <option value="November">November</option><option value="Desember">Desember</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select class="form-select" id="filterTahunBayar" onchange="loadTablePembayaran()">
+                                    <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 stat-pusat-only">
+                                <select class="form-select" id="filterWilayahBayar" onchange="loadTablePembayaran()">
+                                    <option value="">Semua Wilayah</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="tablePembayaran">
+                                <thead>
+                                    <tr>
+                                        <th>Tgl Bayar</th>
+                                        <th>Periode</th>
+                                        <th>Wilayah</th>
+                                        <th>Jemaat</th>
+                                        <th>Nominal (Rp)</th>
+                                        <th>Bukti</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: LAPORAN -->
+                <div id="view-laporan" class="view-section">
+                    <h4 style="color: var(--primary-blue); font-weight: 600; mb-4">Laporan Keuangan & Ekspor</h4>
+                    
+                    <div class="card border-0 shadow-sm rounded-4 mb-4">
+                        <div class="card-body p-4">
+                            <form id="formGenerateLaporan" class="row g-3 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label">Tahun</label>
+                                    <select class="form-select" id="lapTahun">
+                                        <option value="2026">2026</option>
+                                        <option value="2025">2025</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Bulan</label>
+                                    <select class="form-select" id="lapBulan">
+                                        <option value="Semua">Sepanjang Tahun</option>
+                                        <option value="Januari">Januari</option><option value="Februari">Februari</option>
+                                        <option value="Maret">Maret</option><option value="April">April</option>
+                                        <option value="Mei">Mei</option><option value="Juni">Juni</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 stat-pusat-only">
+                                    <label class="form-label">Wilayah</label>
+                                    <select class="form-select" id="lapWilayah">
+                                        <option value="Semua">Semua Wilayah</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button type="button" class="btn btn-primary w-100 rounded-pill" onclick="generateLaporan()"><i class="fas fa-search"></i> Tampilkan Data</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="hasilLaporan" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold m-0">Hasil Rekapitulasi</h5>
+                            <div>
+                                <button class="btn btn-sm btn-outline-danger me-2" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-sm btn-outline-success" onclick="exportExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                            </div>
+                        </div>
+                        <div class="table-custom p-3">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="tableLaporanDetail">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Gereja (Jemaat)</th>
+                                            <th>Wilayah</th>
+                                            <th>Periode</th>
+                                            <th>Nominal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                    <tfoot>
+                                        <tr class="fw-bold text-end">
+                                            <td colspan="3">Total Pendapatan:</td>
+                                            <td class="text-start text-success" id="totalPendapatanLap">Rp 0</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: PENGATURAN -->
+                <div id="view-pengaturan" class="view-section">
+                    <h4 style="color: var(--primary-blue); font-weight: 600; mb-4">Pengaturan Profil & Sistem</h4>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 h-100">
+                                <div class="card-header bg-white fw-bold py-3 border-bottom-0"><i class="fas fa-user-circle text-primary"></i> Profil Pengguna</div>
+                                <div class="card-body">
+                                    <form id="formProfil">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Nama</label>
+                                            <input type="text" class="form-control bg-light" id="profNama" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Email</label>
+                                            <input type="email" class="form-control bg-light" id="profEmail" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small">Role / Hak Akses</label>
+                                            <input type="text" class="form-control bg-light" id="profRole" readonly>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 stat-pusat-only">
+                            <div class="card border-0 shadow-sm rounded-4 bg-danger bg-opacity-10 border-danger border h-100">
+                                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center p-5">
+                                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                                    <h5 class="text-danger fw-bold">Reset Database Sistem</h5>
+                                    <p class="text-muted small">Tindakan ini akan menghapus seluruh data yang tersimpan secara lokal (Wilayah, Jemaat, Pembayaran, User).</p>
+                                    <button class="btn btn-danger mt-2 rounded-pill px-4" onclick="resetDatabase()"><i class="fas fa-trash-restore"></i> Bersihkan Semua Data</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <footer class="mt-auto py-3 text-center text-muted small bg-white border-top">
+                &copy; 2026 Persekutuan Gereja-Gereja Baptis Papua (PGBP). Hak Cipta Dilindungi.
+            </footer>
+        </div>
+    </div>
+
+    <!-- ================= MODALS ================= -->
+    
+    <!-- Modal Wilayah -->
+    <div class="modal fade" id="modalWilayah" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white" style="background-color: var(--primary-blue);">
+                    <h5 class="modal-title"><i class="fas fa-map-marked-alt"></i> Form Wilayah</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formWilayah" onsubmit="saveWilayah(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="wilayahId">
+                        <div class="mb-3">
+                            <label class="form-label">Nama Wilayah</label>
+                            <input type="text" class="form-control" id="wilayahNama" required placeholder="Contoh: Wilayah Tabi">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kontak (HP/WA)</label>
+                            <input type="text" class="form-control" id="wilayahKontak" placeholder="0812...">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-gold px-4">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Jemaat -->
+    <div class="modal fade" id="modalJemaat" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white" style="background-color: var(--primary-blue);">
+                    <h5 class="modal-title"><i class="fas fa-church"></i> Form Jemaat (Gereja)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formJemaat" onsubmit="saveJemaat(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="jemaatId">
+                        <div class="mb-3">
+                            <label class="form-label">Nama Gereja (Jemaat)</label>
+                            <input type="text" class="form-control" id="jemaatNama" required placeholder="Contoh: GBI Sion">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Wilayah</label>
+                            <select class="form-select bg-light" id="jemaatWilayahId" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nama Pendeta / Gembala Sidang</label>
+                            <input type="text" class="form-control" id="jemaatPendeta" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Jumlah Anggota Jemaat (Jiwa)</label>
+                            <input type="number" class="form-control" id="jemaatJumlah" required min="1">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-gold px-4">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Pembayaran -->
+    <div class="modal fade" id="modalPembayaran" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white" style="background-color: var(--primary-blue);">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice-dollar"></i> Input Iuran Bulanan</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formPembayaran" onsubmit="savePembayaran(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="bayarId">
+                        <input type="hidden" id="bayarBuktiBase64"> <!-- Menyimpan string Base64 Bukti -->
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Tanggal Bayar</label>
+                                <input type="date" class="form-control" id="bayarTanggal" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nominal (Rp)</label>
+                                <input type="number" class="form-control" id="bayarNominal" required min="1000">
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Iuran Untuk Bulan</label>
+                                <select class="form-select" id="bayarBulan" required>
+                                    <option value="Januari">Januari</option><option value="Februari">Februari</option>
+                                    <option value="Maret">Maret</option><option value="April">April</option>
+                                    <option value="Mei">Mei</option><option value="Juni">Juni</option>
+                                    <option value="Juli">Juli</option><option value="Agustus">Agustus</option>
+                                    <option value="September">September</option><option value="Oktober">Oktober</option>
+                                    <option value="November">November</option><option value="Desember">Desember</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tahun</label>
+                                <input type="number" class="form-control" id="bayarTahun" value="2026" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Wilayah</label>
+                            <select class="form-select bg-light" id="bayarWilayahId" onchange="updateJemaatDropdown('bayarWilayahId', 'bayarJemaatId')" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Gereja (Jemaat)</label>
+                            <select class="form-select" id="bayarJemaatId" required>
+                                <option value="">Pilih Wilayah Terlebih Dahulu</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Unggah Bukti Transfer / QRIS (Opsional)</label>
+                            <input type="file" class="form-control" id="bayarFile" accept="image/*" onchange="handleFileUpload(event)">
+                            <small class="text-muted" style="font-size:0.75rem;">Maksimal 2MB. Format: JPG, PNG.</small>
+                            <div id="previewBuktiContainer" class="mt-2 text-center" style="display:none;">
+                                <img id="previewBukti" class="bukti-img-preview">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-gold px-4">Simpan Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Lihat Bukti -->
+    <div class="modal fade" id="modalLihatBukti" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bukti Pembayaran</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center bg-light">
+                    <img id="gambarBuktiBesar" class="img-fluid rounded" src="" alt="Bukti Transfer">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        /**
+         * ==========================================
+         * 1. DATABASE & INISIALISASI
+         * ==========================================
+         */
+        const DB_KEY = 'PGBP_APP_V2';
+        let currentUser = null;
+        let chartPem = null;
+        let chartWil = null;
+
+        function initDatabase() {
+            let db = JSON.parse(localStorage.getItem(DB_KEY));
+            if (!db) {
+                db = {
+                    users: [
+                        { id: 1, email: 'admin@pgbp.org', password: '123', role: 'Super Admin', nama: 'Bendahara Pusat', wilayahId: null }
+                    ],
+                    wilayah: [
+                        { id: 1, nama: 'Wilayah Tabi', kontak: '08111' },
+                        { id: 2, nama: 'Wilayah Saireri', kontak: '08222' },
+                        { id: 3, nama: 'Wilayah Meepago', kontak: '08333' },
+                        { id: 4, nama: 'Wilayah Lapago', kontak: '08444' },
+                        { id: 5, nama: 'Wilayah Anim Ha', kontak: '08555' }
+                    ],
+                    jemaat: [],
+                    pembayaran: []
+                };
+                localStorage.setItem(DB_KEY, JSON.stringify(db));
+            }
+            return db;
+        }
+
+        function getDB() { return JSON.parse(localStorage.getItem(DB_KEY)) || initDatabase(); }
+        function saveDB(data) { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initDatabase();
+            
+            // Set Tanggal
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            // Cek Session
+            const session = sessionStorage.getItem('currentUser');
+            if (session) {
+                currentUser = JSON.parse(session);
+                showApp();
+            } else {
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').style.display = 'none';
+                        document.getElementById('auth-page').style.display = 'flex';
+                        loadWilayahOptionsToRegister();
+                    }, 500);
+                }, 1000);
+            }
+
+            // Setup Navigation Sidebar
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (this.hasAttribute('data-target')) {
+                        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+                        this.classList.add('active');
+                        switchView(this.getAttribute('data-target'));
+                        // Tutup sidebar di mobile
+                        if(window.innerWidth < 768) document.getElementById('sidebar').classList.remove('show');
+                    }
+                });
+            });
+
+            document.getElementById('sidebarToggle').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('show');
+            });
+        });
+
+        /**
+         * ==========================================
+         * 2. AUTENTIKASI (LOGIN & REGISTER)
+         * ==========================================
+         */
+        function toggleAuth(type) {
+            if(type === 'register') {
+                document.getElementById('login-form-container').style.display = 'none';
+                document.getElementById('register-form-container').style.display = 'block';
+            } else {
+                document.getElementById('register-form-container').style.display = 'none';
+                document.getElementById('login-form-container').style.display = 'block';
+            }
+        }
+
+        function toggleNewWilayah() {
+            const select = document.getElementById('regWilayahSelect');
+            const input = document.getElementById('regWilayahBaru');
+            if(input.style.display === 'none') {
+                select.style.display = 'none';
+                input.style.display = 'block';
+                input.required = true;
+                select.required = false;
+            } else {
+                select.style.display = 'block';
+                input.style.display = 'none';
+                input.required = false;
+                select.required = true;
+                input.value = '';
+            }
+        }
+
+        function loadWilayahOptionsToRegister() {
+            const db = getDB();
+            let options = '<option value="">-- Pilih Wilayah --</option>';
+            db.wilayah.forEach(w => { options += `<option value="${w.id}">${w.nama}</option>`; });
+            document.getElementById('regWilayahSelect').innerHTML = options;
+        }
+
+        // Proses Login
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            
+            const db = getDB();
+            let user = db.users.find(u => u.email === email && u.password === pass);
+            
+            // Fallback default super admin
+            if (!user && email === 'admin@pgbp.org' && pass === 'admin123') {
+                user = { id: 1, role: 'Super Admin', nama: 'Bendahara Pusat', email: 'admin@pgbp.org', wilayahId: null };
+            }
+
+            if (user) {
+                sessionStorage.setItem('currentUser', JSON.stringify(user));
+                currentUser = user;
+                
+                Swal.fire({ icon: 'success', title: 'Login Berhasil', showConfirmButton: false, timer: 1000 }).then(() => {
+                    document.getElementById('auth-page').style.display = 'none';
+                    showApp();
+                });
+            } else {
+                Swal.fire('Gagal', 'Email atau password salah.', 'error');
+            }
+        });
+
+        // Proses Register Wilayah
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            let db = getDB();
+            const email = document.getElementById('regEmail').value;
+
+            if(db.users.find(u => u.email === email)) {
+                return Swal.fire('Gagal', 'Email sudah terdaftar!', 'error');
+            }
+
+            let wilayahId = document.getElementById('regWilayahSelect').value;
+            const wilayahBaru = document.getElementById('regWilayahBaru').value;
+
+            // Jika menambah wilayah baru
+            if(wilayahBaru.trim() !== '') {
+                wilayahId = db.wilayah.length > 0 ? Math.max(...db.wilayah.map(w=>w.id)) + 1 : 1;
+                db.wilayah.push({ id: wilayahId, nama: wilayahBaru, kontak: '-' });
+            }
+
+            const newUser = {
+                id: db.users.length > 0 ? Math.max(...db.users.map(u=>u.id)) + 1 : 1,
+                nama: document.getElementById('regNama').value,
+                email: email,
+                password: document.getElementById('regPassword').value,
+                role: 'Admin Wilayah',
+                wilayahId: parseInt(wilayahId)
+            };
+
+            db.users.push(newUser);
+            saveDB(db);
+
+            Swal.fire('Berhasil', 'Akun Wilayah berhasil dibuat. Silakan login.', 'success').then(() => {
+                toggleAuth('login');
+                document.getElementById('registerForm').reset();
+                document.getElementById('loginEmail').value = email;
+            });
+        });
+
+        // Logout
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            sessionStorage.removeItem('currentUser');
+            location.reload();
+        });
+
+        /**
+         * ==========================================
+         * 3. MANAJEMEN UI (ROLE-BASED)
+         * ==========================================
+         */
+        function showApp() {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('auth-page').style.display = 'none';
+            document.getElementById('app-layout').style.display = 'flex';
+
+            document.getElementById('userNameDisplay').innerText = currentUser.nama;
+            document.getElementById('userRoleBadge').innerText = currentUser.role;
+
+            // Terapkan Restriksi UI berdasarkan Role
+            const isPusat = currentUser.role === 'Super Admin';
+            
+            document.querySelectorAll('.menu-pusat-only, .stat-pusat-only').forEach(el => {
+                el.style.display = isPusat ? '' : 'none';
+            });
+
+            // Isi Profile
+            document.getElementById('profNama').value = currentUser.nama;
+            document.getElementById('profEmail').value = currentUser.email;
+            document.getElementById('profRole').value = currentUser.role + (currentUser.wilayahId ? ` (${getWilayahName(currentUser.wilayahId)})` : '');
+
+            populateDropdowns();
+            switchView('dashboard');
+        }
+
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+            const target = document.getElementById('view-' + viewName);
+            if(target) target.classList.add('active');
+            
+            const titles = {
+                'dashboard': 'Dashboard',
+                'wilayah': 'Manajemen Wilayah',
+                'jemaat': 'Manajemen Jemaat',
+                'pembayaran': 'Monitoring Iuran',
+                'laporan': 'Laporan Keuangan',
+                'pengaturan': 'Pengaturan Sistem'
+            };
+            document.getElementById('topbar-title').innerText = titles[viewName] || '';
+
+            if (viewName === 'dashboard') loadDashboard();
+            if (viewName === 'wilayah') loadTableWilayah();
+            if (viewName === 'jemaat') loadTableJemaat();
+            if (viewName === 'pembayaran') loadTablePembayaran();
+        }
+
+        /**
+         * ==========================================
+         * 4. HELPER & FORMATTER
+         * ==========================================
+         */
+        const formatRp = (angka) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        const getWilayahName = (id) => { const w = getDB().wilayah.find(x => x.id == id); return w ? w.nama : '-'; };
+        const getJemaatName = (id) => { const j = getDB().jemaat.find(x => x.id == id); return j ? j.nama : '-'; };
+
+        function resetForm(formId) {
+            document.getElementById(formId).reset();
+            const idField = document.getElementById(formId).querySelector('input[type="hidden"]');
+            if (idField) idField.value = '';
+            
+            // Clear image preview if any
+            if(formId === 'formPembayaran') {
+                document.getElementById('bayarBuktiBase64').value = '';
+                document.getElementById('previewBuktiContainer').style.display = 'none';
+            }
+        }
+
+        function populateDropdowns() {
+            const db = getDB();
+            let wilayahOptions = '<option value="">-- Pilih Wilayah --</option>';
+            db.wilayah.forEach(w => { wilayahOptions += `<option value="${w.id}">${w.nama}</option>`; });
+
+            document.getElementById('jemaatWilayahId').innerHTML = wilayahOptions;
+            document.getElementById('bayarWilayahId').innerHTML = wilayahOptions;
+            document.getElementById('lapWilayah').innerHTML = '<option value="Semua">Semua Wilayah</option>' + wilayahOptions;
+            document.getElementById('filterWilayahJemaat').innerHTML = '<option value="">Semua Wilayah</option>' + wilayahOptions;
+            document.getElementById('filterWilayahBayar').innerHTML = '<option value="">Semua Wilayah</option>' + wilayahOptions;
+        }
+
+        function updateJemaatDropdown(wilayahSelectId, jemaatSelectId, selectedJemaatId = null) {
+            const wId = document.getElementById(wilayahSelectId).value;
+            const jSelect = document.getElementById(jemaatSelectId);
+            jSelect.innerHTML = '<option value="">-- Pilih Jemaat --</option>';
+            
+            if (wId) {
+                const jemaats = getDB().jemaat.filter(j => j.wilayahId == wId);
+                jemaats.forEach(j => {
+                    const sel = (selectedJemaatId == j.id) ? 'selected' : '';
+                    jSelect.innerHTML += `<option value="${j.id}" ${sel}>${j.nama}</option>`;
+                });
+            }
+        }
+
+        /**
+         * ==========================================
+         * 5. LOGIC DASHBOARD
+         * ==========================================
+         */
+        function loadDashboard() {
+            const db = getDB();
+            const currMonth = new Date().toLocaleString('id-ID', { month: 'long' });
+            const currYear = new Date().getFullYear();
+            const isPusat = currentUser.role === 'Super Admin';
+
+            let targetJemaat = db.jemaat;
+            let targetPembayaran = db.pembayaran;
+
+            if(!isPusat) {
+                document.getElementById('dash-title').innerText = `Dashboard ${getWilayahName(currentUser.wilayahId)}`;
+                targetJemaat = targetJemaat.filter(j => j.wilayahId == currentUser.wilayahId);
+                targetPembayaran = targetPembayaran.filter(p => p.wilayahId == currentUser.wilayahId);
+            }
+
+            // Stats
+            document.getElementById('stat-wilayah').innerText = db.wilayah.length;
+            document.getElementById('stat-jemaat').innerText = targetJemaat.length;
+            
+            const totalJiwa = targetJemaat.reduce((sum, j) => sum + Number(j.jumlah), 0);
+            document.getElementById('stat-jiwa').innerText = totalJiwa + " Jiwa";
+
+            let totalMasukBulan = targetPembayaran.filter(p => p.bulan === currMonth && p.tahun == currYear).reduce((sum, p) => sum + Number(p.nominal), 0);
+            document.getElementById('stat-masuk-bulan').innerText = formatRp(totalMasukBulan);
+
+            renderCharts(db, targetPembayaran, isPusat);
+        }
+
+        function renderCharts(db, targetPembayaran, isPusat) {
+            // Chart Pemasukan Bulanan
+            const ctxPem = document.getElementById('chartPemasukan').getContext('2d');
+            const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const dataPem = Array(12).fill(0);
+            
+            targetPembayaran.forEach(p => {
+                if (p.tahun == new Date().getFullYear()) {
+                    const m = labels.findIndex(l => p.bulan.startsWith(l)); // Mencocokkan 3 huruf pertama
+                    if (m >= 0) dataPem[m] += Number(p.nominal);
+                }
+            });
+
+            if(chartPem) chartPem.destroy();
+            chartPem = new Chart(ctxPem, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{ label: 'Pemasukan (Rp)', data: dataPem, backgroundColor: '#0A3254', borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            // Chart Wilayah (Hanya untuk Pusat)
+            if(isPusat) {
+                const ctxWil = document.getElementById('chartWilayah').getContext('2d');
+                let labelWil = [], dataWil = [];
+                db.wilayah.forEach(w => {
+                    labelWil.push(w.nama);
+                    dataWil.push(targetPembayaran.filter(p => p.wilayahId == w.id).reduce((a,b)=>a+Number(b.nominal),0));
+                });
+
+                if(chartWil) chartWil.destroy();
+                chartWil = new Chart(ctxWil, {
+                    type: 'doughnut',
+                    data: { labels: labelWil, datasets: [{ data: dataWil, backgroundColor: ['#0A3254', '#D4AF37', '#1A5F9A', '#C19B2E', '#6f42c1'] }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+        }
+
+        /**
+         * ==========================================
+         * 6. CRUD MASTER (WILAYAH & JEMAAT)
+         * ==========================================
+         */
+        function loadTableWilayah() {
+            const tb = document.querySelector('#tableWilayah tbody');
+            tb.innerHTML = '';
+            getDB().wilayah.forEach((w, idx) => {
+                tb.innerHTML += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td class="fw-bold">${w.nama}</td>
+                        <td>${w.kontak}</td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-primary" onclick="editWilayah(${w.id})"><i class="fas fa-edit"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function saveWilayah(e) {
+            e.preventDefault();
+            const id = document.getElementById('wilayahId').value;
+            let db = getDB();
+            
+            const data = {
+                nama: document.getElementById('wilayahNama').value,
+                kontak: document.getElementById('wilayahKontak').value
+            };
+
+            if (id) {
+                const idx = db.wilayah.findIndex(x => x.id == id);
+                db.wilayah[idx] = { ...db.wilayah[idx], ...data };
+            } else {
+                data.id = db.wilayah.length > 0 ? Math.max(...db.wilayah.map(w=>w.id)) + 1 : 1;
+                db.wilayah.push(data);
+            }
+            saveDB(db);
+            bootstrap.Modal.getInstance(document.getElementById('modalWilayah')).hide();
+            Swal.fire('Tersimpan', 'Data wilayah berhasil disimpan', 'success');
+            loadTableWilayah(); populateDropdowns(); loadDashboard();
+        }
+
+        function editWilayah(id) {
+            const w = getDB().wilayah.find(x => x.id == id);
+            document.getElementById('wilayahId').value = w.id;
+            document.getElementById('wilayahNama').value = w.nama;
+            document.getElementById('wilayahKontak').value = w.kontak;
+            new bootstrap.Modal(document.getElementById('modalWilayah')).show();
+        }
+
+        // --- CRUD JEMAAT ---
+        function setupFormJemaat() {
+            resetForm('formJemaat');
+            if(currentUser.role === 'Admin Wilayah') {
+                document.getElementById('jemaatWilayahId').value = currentUser.wilayahId;
+                // document.getElementById('jemaatWilayahId').disabled = true; // Optional: kunci
+            }
+        }
+
+        function loadTableJemaat() {
+            const tb = document.querySelector('#tableJemaat tbody');
+            tb.innerHTML = '';
+            
+            let filterW = document.getElementById('filterWilayahJemaat').value;
+            if(currentUser.role === 'Admin Wilayah') filterW = currentUser.wilayahId; // Force filter
+
+            let data = getDB().jemaat;
+            if (filterW) data = data.filter(j => j.wilayahId == filterW);
+
+            if(data.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Belum ada data jemaat.</td></tr>';
+            }
+
+            data.forEach((j, idx) => {
+                tb.innerHTML += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td class="fw-bold">${j.nama}</td>
+                        <td>${getWilayahName(j.wilayahId)}</td>
+                        <td>${j.pendeta}</td>
+                        <td>${j.jumlah} Jiwa</td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-primary" onclick="editJemaat(${j.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-light border text-danger" onclick="hapusJemaat(${j.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function saveJemaat(e) {
+            e.preventDefault();
+            const id = document.getElementById('jemaatId').value;
+            let db = getDB();
+            
+            // Kunci wilayah untuk Admin Wilayah
+            let wId = document.getElementById('jemaatWilayahId').value;
+            if(currentUser.role === 'Admin Wilayah') wId = currentUser.wilayahId;
+
+            const data = {
+                nama: document.getElementById('jemaatNama').value,
+                wilayahId: wId,
+                pendeta: document.getElementById('jemaatPendeta').value,
+                jumlah: document.getElementById('jemaatJumlah').value
+            };
+
+            if (id) {
+                const idx = db.jemaat.findIndex(x => x.id == id);
+                db.jemaat[idx] = { ...db.jemaat[idx], ...data };
+            } else {
+                data.id = db.jemaat.length > 0 ? Math.max(...db.jemaat.map(j=>j.id)) + 1 : 1;
+                db.jemaat.push(data);
+            }
+            saveDB(db);
+            bootstrap.Modal.getInstance(document.getElementById('modalJemaat')).hide();
+            Swal.fire('Tersimpan', 'Data jemaat tersimpan', 'success');
+            loadTableJemaat(); loadDashboard();
+        }
+
+        function editJemaat(id) {
+            const j = getDB().jemaat.find(x => x.id == id);
+            document.getElementById('jemaatId').value = j.id;
+            document.getElementById('jemaatNama').value = j.nama;
+            document.getElementById('jemaatWilayahId').value = j.wilayahId;
+            document.getElementById('jemaatPendeta').value = j.pendeta;
+            document.getElementById('jemaatJumlah').value = j.jumlah;
+            new bootstrap.Modal(document.getElementById('modalJemaat')).show();
+        }
+        
+        function hapusJemaat(id) {
+            Swal.fire({ title: 'Hapus data?', text: "Data gereja akan dihapus", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' }).then((result) => {
+                if (result.isConfirmed) {
+                    let db = getDB(); db.jemaat = db.jemaat.filter(x => x.id != id); saveDB(db); loadTableJemaat(); loadDashboard();
+                }
+            });
+        }
+
+        /**
+         * ==========================================
+         * 7. CRUD PEMBAYARAN & UPLOAD GAMBAR
+         * ==========================================
+         */
+        // Handle konversi file gambar ke Base64 (Untuk simulasi db offline)
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            // Batasan ukuran 2MB
+            if(file.size > 2 * 1024 * 1024) {
+                Swal.fire('Error', 'Ukuran file terlalu besar (Maks 2MB).', 'error');
+                event.target.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('bayarBuktiBase64').value = e.target.result;
+                document.getElementById('previewBukti').src = e.target.result;
+                document.getElementById('previewBuktiContainer').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function lihatBukti(id) {
+            const p = getDB().pembayaran.find(x => x.id == id);
+            if(p && p.bukti) {
+                document.getElementById('gambarBuktiBesar').src = p.bukti;
+                new bootstrap.Modal(document.getElementById('modalLihatBukti')).show();
+            } else {
+                Swal.fire('Info', 'Tidak ada bukti transfer yang dilampirkan.', 'info');
+            }
+        }
+
+        function setupFormPembayaran() {
+            resetForm('formPembayaran');
+            document.getElementById('bayarTanggal').valueAsDate = new Date();
+            
+            if(currentUser.role === 'Admin Wilayah') {
+                const wSelect = document.getElementById('bayarWilayahId');
+                wSelect.value = currentUser.wilayahId;
+                // wSelect.disabled = true; // Lock dropdown
+                updateJemaatDropdown('bayarWilayahId', 'bayarJemaatId');
+            }
+        }
+
+        function loadTablePembayaran() {
+            const tb = document.querySelector('#tablePembayaran tbody');
+            tb.innerHTML = '';
+            
+            let fBln = document.getElementById('filterBulanBayar').value;
+            let fThn = document.getElementById('filterTahunBayar').value;
+            let fWil = document.getElementById('filterWilayahBayar').value;
+
+            // Force filter untuk Admin Wilayah
+            if(currentUser.role === 'Admin Wilayah') fWil = currentUser.wilayahId;
+
+            let data = getDB().pembayaran;
+            if (fBln) data = data.filter(p => p.bulan === fBln);
+            if (fThn) data = data.filter(p => p.tahun == fThn);
+            if (fWil) data = data.filter(p => p.wilayahId == fWil);
+
+            data.sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            if(data.length === 0) {
+                tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Tidak ada data.</td></tr>';
+            }
+
+            data.forEach((p) => {
+                const btnBukti = p.bukti 
+                    ? `<button class="btn btn-sm btn-outline-info" onclick="lihatBukti(${p.id})" title="Lihat Bukti"><i class="fas fa-image"></i></button>`
+                    : `<span class="badge bg-secondary">Tidak ada</span>`;
+
+                tb.innerHTML += `
+                    <tr>
+                        <td>${p.tanggal}</td>
+                        <td><span class="fw-bold">${p.bulan}</span> ${p.tahun}</td>
+                        <td>${getWilayahName(p.wilayahId)}</td>
+                        <td>${getJemaatName(p.jemaatId)}</td>
+                        <td class="text-end fw-bold text-success">${formatRp(p.nominal)}</td>
+                        <td class="text-center">${btnBukti}</td>
+                        <td>
+                            <button class="btn btn-sm btn-light border text-danger" onclick="hapusPembayaran(${p.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function savePembayaran(e) {
+            e.preventDefault();
+            const id = document.getElementById('bayarId').value;
+            let db = getDB();
+            
+            let wId = document.getElementById('bayarWilayahId').value;
+            if(currentUser.role === 'Admin Wilayah') wId = currentUser.wilayahId;
+
+            const data = {
+                tanggal: document.getElementById('bayarTanggal').value,
+                nominal: document.getElementById('bayarNominal').value,
+                bulan: document.getElementById('bayarBulan').value,
+                tahun: document.getElementById('bayarTahun').value,
+                wilayahId: wId,
+                jemaatId: document.getElementById('bayarJemaatId').value,
+                bukti: document.getElementById('bayarBuktiBase64').value // Simpan base64 gambar
+            };
+
+            if (id) {
+                const idx = db.pembayaran.findIndex(x => x.id == id);
+                // Jika tidak upload gambar baru, pakai gambar lama
+                if(!data.bukti) data.bukti = db.pembayaran[idx].bukti; 
+                db.pembayaran[idx] = { ...db.pembayaran[idx], ...data };
+            } else {
+                data.id = db.pembayaran.length > 0 ? Math.max(...db.pembayaran.map(x=>x.id)) + 1 : 1;
+                db.pembayaran.push(data);
+            }
+
+            // Antisipasi LocalStorage Quota Exceeded (Quota biasanya 5MB)
+            try {
+                saveDB(db);
+                bootstrap.Modal.getInstance(document.getElementById('modalPembayaran')).hide();
+                Swal.fire('Berhasil', 'Iuran berhasil dicatat', 'success');
+                loadTablePembayaran(); loadDashboard();
+            } catch (err) {
+                if(err.code === 22 || err.name === 'QuotaExceededError') {
+                    Swal.fire('Penyimpanan Penuh', 'Gambar yang diunggah terlalu besar untuk mode demo offline ini. Coba tanpa gambar.', 'error');
+                }
+            }
+        }
+
+        function hapusPembayaran(id) {
+            Swal.fire({ title: 'Hapus Transaksi?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' }).then((result) => {
+                if (result.isConfirmed) {
+                    let db = getDB(); db.pembayaran = db.pembayaran.filter(x => x.id != id); saveDB(db); loadTablePembayaran(); loadDashboard();
+                }
+            });
+        }
+
+        /**
+         * ==========================================
+         * 8. LAPORAN & EKSPOR
+         * ==========================================
+         */
+        function generateLaporan() {
+            const thn = document.getElementById('lapTahun').value;
+            const bln = document.getElementById('lapBulan').value;
+            let wil = document.getElementById('lapWilayah').value;
+
+            if(currentUser.role === 'Admin Wilayah') wil = currentUser.wilayahId;
+
+            let data = getDB().pembayaran;
+            data = data.filter(p => p.tahun == thn);
+            if(bln !== 'Semua') data = data.filter(p => p.bulan === bln);
+            if(wil !== 'Semua') data = data.filter(p => p.wilayahId == wil);
+
+            const tb = document.querySelector('#tableLaporanDetail tbody');
+            tb.innerHTML = '';
+            let total = 0;
+
+            if (data.length === 0) {
+                tb.innerHTML = '<tr><td colspan="4" class="text-center">Data tidak ditemukan.</td></tr>';
+            } else {
+                // Kelompokkan per Jemaat (Optional, saat ini list flat)
+                data.sort((a,b) => new Date(a.tanggal) - new Date(b.tanggal));
+                data.forEach(p => {
+                    total += Number(p.nominal);
+                    tb.innerHTML += `
+                        <tr>
+                            <td>${getJemaatName(p.jemaatId)}</td>
+                            <td>${getWilayahName(p.wilayahId)}</td>
+                            <td>${p.bulan} ${p.tahun}</td>
+                            <td class="text-end">${formatRp(p.nominal)}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            document.getElementById('totalPendapatanLap').innerText = formatRp(total);
+            document.getElementById('hasilLaporan').style.display = 'block';
+        }
+
+        function exportPDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            doc.setFontSize(16); doc.text("Laporan Iuran PGBP", 14, 20);
+            doc.setFontSize(11); doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 28);
+            doc.autoTable({ html: '#tableLaporanDetail', startY: 35, headStyles: { fillColor: [10, 50, 84] } });
+            doc.save('Laporan_Iuran.pdf');
+        }
+
+        function exportExcel() {
+            const wb = XLSX.utils.table_to_book(document.getElementById("tableLaporanDetail"), {sheet: "Laporan"});
+            XLSX.writeFile(wb, "Laporan_Iuran.xlsx");
+        }
+
+        function resetDatabase() {
+            Swal.fire({ title: 'Hapus Semua Data?', text: "Data akan hilang permanen!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' }).then((result) => {
+                if (result.isConfirmed) { localStorage.removeItem(DB_KEY); sessionStorage.removeItem('currentUser'); location.reload(); }
+            });
+        }
+    </script>
+</body>
+</html>
